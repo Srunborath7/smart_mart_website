@@ -1,0 +1,10 @@
+@media (max-width: 1000px) {
+    .card-body h6{
+        font-size: 14px;
+    }
+}
+@media (max-width: 768px) {
+    .categories-stats{
+        gap: 20px;
+    }
+}
