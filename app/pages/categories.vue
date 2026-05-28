@@ -96,7 +96,7 @@ onMounted(fetchCategories)
         </small>
       </div>
 
-      <BaseButton variant="primary" @click="open = true">
+      <BaseButton variant="danger" @click="open = true">
         + Add Category
       </BaseButton>
 

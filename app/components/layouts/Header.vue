@@ -21,10 +21,6 @@
 
         <span>{{ auth.user?.name }}</span>
 
-        <button class="btn btn-sm btn-light" @click="auth.logout()">
-          Logout
-        </button>
-
       </div>
 
     </div>
@@ -33,7 +29,7 @@
   <div v-if="showChat && !selectedRoom" class="room-page">
     <div class="room-top">
 
-      <h3>Messages</h3>
+      <h4>Smart Mart Messages</h4>
 
       <button class="close-btn" @click="closeChat">
         ✕
@@ -43,13 +39,9 @@
     <div class="room-list">
 
       <div v-for="room in rooms" :key="room.id" class="room-item" @click="openRoom(room)">
-
-        <!-- AVATAR -->
         <div class="room-avatar">
           {{ room.name.charAt(0).toUpperCase() }}
         </div>
-
-        <!-- INFO -->
         <div class="room-info">
 
           <div class="room-name">
@@ -161,7 +153,6 @@ const unreadCount = ref(0)
 const chatBody = ref(null)
 
 let socketReady = false
-
 const formatTime = (date) => {
 
   if (!date) return ""
