@@ -30,11 +30,7 @@
     </div>
 
   </header>
-
-  <!-- ROOM LIST -->
   <div v-if="showChat && !selectedRoom" class="room-page">
-
-    <!-- HEADER -->
     <div class="room-top">
 
       <h3>Messages</h3>
@@ -44,8 +40,6 @@
       </button>
 
     </div>
-
-    <!-- ROOMS -->
     <div class="room-list">
 
       <div v-for="room in rooms" :key="room.id" class="room-item" @click="openRoom(room)">
@@ -265,7 +259,6 @@ const sendMessage = async () => {
   message.value = ""
 }
 
-// ---------------- CLOSE CHAT ----------------
 const closeChat = () => {
 
   showChat.value = false
@@ -300,6 +293,9 @@ const closeChat = () => {
 .message-icon {
   position: relative;
   cursor: pointer;
+}
+.message-icon:hover {
+  opacity: 0.8;
 }
 
 .badge {
