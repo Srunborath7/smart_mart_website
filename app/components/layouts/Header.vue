@@ -1,18 +1,22 @@
 <template>
   <header class="header">
+    <button class="menu-btn" @click="toggleSidebar">
+      ☰
+    </button>
 
-    <!-- MENU -->
-    <button class="menu-btn" @click="toggleSidebar">☰</button>
-
-    <div class="container-fluid d-flex align-items-center justify-content-around gap-3 w-100">
+    <div class="container-fluid d-flex align-items-center justify-content-between w-100">
 
       <h2 class="mb-0">Dashboard</h2>
 
-      <div class="ms-auto d-flex align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="message-icon" @click="openMessages">
 
-        <!-- CHAT ICON -->
-        <div class="icon" @click="openChat">
           <AppIcon name="MessageSquareQuote" />
+
+          <span v-if="unreadCount > 0" class="badge">
+            {{ unreadCount }}
+          </span>
+
         </div>
 
         <span>{{ auth.user?.name }}</span>
@@ -22,54 +26,121 @@
         </button>
 
       </div>
-    </div>
-
-    <!-- CHAT BOX -->
-    <div v-if="showChat" class="chat-box">
-
-      <!-- HEADER -->
-      <div class="chat-header">
-        <div>💬 Chat Room</div>
-        <button class="close" @click="closeChat">✕</button>
-      </div>
-
-      <!-- BODY -->
-      <div ref="chatBody" class="chat-body">
-
-        <div
-          v-for="(msg, i) in messages"
-          :key="msg.id || i"
-          class="msg"
-          :class="{ 'my-msg': msg.sender_name === auth.user?.name }"
-        >
-          <div class="msg-name">
-            {{ msg.sender_name }}
-          </div>
-
-          <div class="msg-text">
-            {{ msg.message }}
-          </div>
-
-          <div class="msg-time">
-            {{ formatTime(msg.createdAt) }}
-          </div>
-        </div>
-
-      </div>
-
-      <!-- FOOTER -->
-      <div class="chat-footer">
-        <input
-          v-model="message"
-          placeholder="Type message..."
-          @keyup.enter="sendMessage"
-        />
-        <button @click="sendMessage">Send</button>
-      </div>
 
     </div>
 
   </header>
+
+  <!-- ROOM LIST -->
+  <div v-if="showChat && !selectedRoom" class="room-page">
+
+    <!-- HEADER -->
+    <div class="room-top">
+
+      <h3>Messages</h3>
+
+      <button class="close-btn" @click="closeChat">
+        ✕
+      </button>
+
+    </div>
+
+    <!-- ROOMS -->
+    <div class="room-list">
+
+      <div v-for="room in rooms" :key="room.id" class="room-item" @click="openRoom(room)">
+
+        <!-- AVATAR -->
+        <div class="room-avatar">
+          {{ room.name.charAt(0).toUpperCase() }}
+        </div>
+
+        <!-- INFO -->
+        <div class="room-info">
+
+          <div class="room-name">
+            {{ room.name }}
+          </div>
+
+          <div class="room-desc">
+            {{ room.description }}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div v-if="selectedRoom" class="chat-page">
+    <div class="chat-header">
+
+      <div class="chat-left">
+
+        <button class="back-btn" @click="selectedRoom = null">
+          ←
+        </button>
+
+        <div class="chat-avatar">
+          {{ selectedRoom.name.charAt(0).toUpperCase() }}
+        </div>
+
+        <div>
+
+          <div class="chat-room-name">
+            {{ selectedRoom.name }}
+          </div>
+
+          <div class="chat-status">
+            online
+          </div>
+
+        </div>
+
+      </div>
+
+      <button class="close-btn" @click="closeChat">
+        ✕
+      </button>
+
+    </div>
+
+    <div ref="chatBody" class="chat-body">
+
+      <div v-for="(msg, i) in messages" :key="msg.id || i" class="message" :class="{
+        mine: msg.sender_name === auth.user?.name
+      }">
+
+        <div class="message-sender">
+          {{ msg.sender_name }}
+        </div>
+
+        <div class="message-text">
+          {{ msg.message }}
+        </div>
+
+        <div class="message-time">
+          {{ formatTime(msg.createdAt) }}
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="chat-footer">
+
+      <input v-model="message" placeholder="Type message..." @keyup.enter="sendMessage" />
+
+      <button @click="sendMessage">
+        Send
+      </button>
+
+    </div>
+
+  </div>
+
 </template>
 
 <script setup>
@@ -82,91 +153,124 @@ const auth = useAuthStore()
 const { $socket } = useNuxtApp() || {}
 const api = useApi()
 
+
 const showChat = ref(false)
-const message = ref("")
+
+const rooms = ref([])
+const selectedRoom = ref(null)
+
 const messages = ref([])
-const roomId = ref(null)
+const message = ref("")
+
+const unreadCount = ref(0)
 
 const chatBody = ref(null)
+
 let socketReady = false
 
-// ---------------- FORMAT TIME ----------------
 const formatTime = (date) => {
+
   if (!date) return ""
+
   return new Date(date).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit"
   })
 }
 
-// ---------------- SCROLL ----------------
 const scrollBottom = () => {
+
   nextTick(() => {
+
     if (chatBody.value) {
-      chatBody.value.scrollTop = chatBody.value.scrollHeight
+      chatBody.value.scrollTop =
+        chatBody.value.scrollHeight
     }
+
   })
 }
 
-// ---------------- LOAD ROOM ----------------
-const loadRoom = async () => {
+const loadRooms = async () => {
+
   const res = await api("/chat-rooms")
-  roomId.value = res.data?.[0]?.id
+
+  rooms.value = res.data || []
 }
 
-// ---------------- LOAD MESSAGES ----------------
-const loadMessages = async () => {
-  const res = await api(`/chat?room_id=${roomId.value}`)
-  messages.value = res.data || []
-}
 
-// ---------------- OPEN CHAT ----------------
-const openChat = async () => {
-
-  if (!roomId.value) {
-    await loadRoom()
-  }
+const openMessages = async () => {
 
   showChat.value = true
 
-  await loadMessages()
-  scrollBottom()
+  await loadRooms()
 
-  if ($socket && roomId.value) {
-    $socket.emit("joinRoom", roomId.value)
-  }
+  unreadCount.value = 0
 
   if (!socketReady && $socket) {
+
     $socket.on("receiveMessage", (data) => {
-      messages.value.push(data)
-      scrollBottom()
+
+      if (
+        selectedRoom.value &&
+        data.room_id === selectedRoom.value.id
+      ) {
+
+        messages.value.push(data)
+
+        scrollBottom()
+
+      } else {
+
+        unreadCount.value++
+
+      }
+
     })
 
     socketReady = true
   }
 }
 
-// ---------------- CLOSE CHAT ----------------
-const closeChat = () => {
-  showChat.value = false
+const openRoom = async (room) => {
+
+  selectedRoom.value = room
+
+  const res = await api(`/chat/room/${room.id}`)
+
+  messages.value = res.data || []
+
+  if ($socket) {
+    $socket.emit("joinRoom", room.id)
+  }
+
+  scrollBottom()
 }
 
-// ---------------- SEND MESSAGE ----------------
 const sendMessage = async () => {
 
   if (!message.value.trim()) return
 
+  if (!selectedRoom.value) return
+
   await api("/chat", {
     method: "POST",
     body: {
-      room_id: roomId.value,
+      room_id: selectedRoom.value.id,
       sender_name: auth.user?.name || "Admin",
-      sender_role: auth.user?.role || "admin",
+      sender_role: auth.user?.role || "ADMIN",
       message: message.value
     }
   })
 
   message.value = ""
+}
+
+// ---------------- CLOSE CHAT ----------------
+const closeChat = () => {
+
+  showChat.value = false
+
+  selectedRoom.value = null
 }
 </script>
 
@@ -182,137 +286,252 @@ const sendMessage = async () => {
   display: flex;
   align-items: center;
   padding: 0 20px;
-  z-index: 1000;
+  z-index: 999;
 }
 
 .menu-btn {
   display: none;
-  background: none;
   border: none;
+  background: none;
   color: white;
   font-size: 24px;
 }
 
-.icon {
+.message-icon {
+  position: relative;
   cursor: pointer;
 }
-.icon:hover {
-  opacity: 0.8;
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: red;
+  color: white;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* CHAT BOX */
-.chat-box {
+.room-page {
   position: fixed;
-  bottom: 80px;
   right: 20px;
-  width: 340px;
-  height: 450px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  bottom: 20px;
+  width: 360px;
+  height: 560px;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
 }
 
-/* HEADER */
-.chat-header {
+.room-top {
+  height: 65px;
   background: #a70000;
   color: white;
-  padding: 10px 12px;
+  padding: 0 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-.close {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-/* BODY */
-.chat-body {
+.room-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+}
+
+.room-item {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.room-item:hover {
   background: #f7f7f7;
 }
 
-/* MESSAGE */
-.msg {
-  max-width: 75%;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: #e4e6eb;
-  color: black;
-  align-self: flex-start;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.my-msg {
+.room-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
   background: #a70000;
   color: white;
-  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
 }
 
-.msg-name {
+.room-info {
+  flex: 1;
+}
+
+.room-name {
+  font-weight: 600;
+}
+
+.room-desc {
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.chat-page {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 360px;
+  height: 560px;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+}
+
+.chat-header {
+  height: 65px;
+  background: #a70000;
+  color: white;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  border: none;
+  background: none;
+  color: white;
+  font-size: 20px;
+}
+
+.chat-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: white;
+  color: #a70000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.chat-room-name {
+  font-weight: 600;
+}
+
+.chat-status {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  max-width: 75%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: white;
+  align-self: flex-start;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.mine {
+  margin-left: auto;
+  background: #a70000;
+  color: white;
+}
+
+.message-sender {
   font-size: 12px;
   font-weight: bold;
 }
 
-.msg-text {
-  font-size: 14px;
+.message-text {
+  margin-top: 4px;
+  word-break: break-word;
 }
 
-.msg-time {
+.message-time {
   font-size: 10px;
   opacity: 0.7;
+  margin-top: 5px;
   text-align: right;
 }
 
-/* FOOTER */
 .chat-footer {
   display: flex;
-  padding: 10px;
-  border-top: 1px solid #ddd;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid #eee;
   background: white;
 }
 
 .chat-footer input {
   flex: 1;
-  padding: 8px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 14px;
+  padding: 10px 14px;
   outline: none;
 }
 
 .chat-footer button {
-  margin-left: 8px;
+  border: none;
   background: #a70000;
   color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 12px;
 }
 
-/* MOBILE */
-@media (max-width: 768px) {
+.close-btn {
+  border: none;
+  background: none;
+  color: white;
+  font-size: 18px;
+}
+
+@media(max-width:768px) {
+
   .menu-btn {
     display: block;
   }
 
-  .chat-box {
-    width: 95%;
-    right: 10px;
+  .room-page,
+  .chat-page {
+    width: 100%;
+    height: 100dvh;
+    right: 0;
+    bottom: 0;
+    border-radius: 0;
   }
+
 }
 </style>
