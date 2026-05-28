@@ -1,9 +1,9 @@
 <script setup>
 defineProps({
   type: { type: String, default: 'button' },
-  variant: { type: String, default: 'primary' }, // bootstrap: primary, success, danger...
+  variant: { type: String, default: 'primary' }, 
   loading: { type: Boolean, default: false },
-  size: { type: String, default: '' } // sm | lg | ''
+  size: { type: String, default: '' } 
 })
 
 const emit = defineEmits(['click'])

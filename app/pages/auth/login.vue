@@ -87,7 +87,7 @@ const login = async () => {
     const res = await api('/auth/login', {
 
       method: 'POST',
-      credentials: 'same-origin',
+      credentials: 'include',
       body: {
         email: email.value,
         password: password.value,

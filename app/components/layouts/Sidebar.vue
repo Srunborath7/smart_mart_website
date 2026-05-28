@@ -252,9 +252,9 @@ const logoutPage = async () => {
   border: none;
   outline: none;
 
-  background: #f8f8f8;
+  background: #fff1f1;
   color: #a70000;
-
+  border: 1px solid #a70000;
   padding: 13px 14px;
 
   border-radius: 14px;

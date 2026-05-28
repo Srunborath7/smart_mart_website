@@ -13,28 +13,18 @@ const close = () => {
 
 <template>
   <div v-if="modelValue" class="modal fade show d-block">
-
-    <!-- BACKDROP -->
     <div class="modal-backdrop fade show" @click="close"></div>
-
-    <!-- MODAL -->
     <div class="modal-dialog modal-dialog-centered">
 
       <div class="modal-content">
-
-        <!-- HEADER -->
         <div class="modal-header">
           <h5 class="modal-title">{{ title }}</h5>
 
           <button class="btn-close" @click="close"></button>
         </div>
-
-        <!-- BODY -->
         <div class="modal-body">
           <slot />
         </div>
-
-        <!-- FOOTER -->
         <div class="modal-footer">
           <slot name="footer" />
         </div>

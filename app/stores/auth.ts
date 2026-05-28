@@ -12,8 +12,6 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-
-    // ✅ SAFE HYDRATION (call anytime, no duplication issues)
     hydrate() {
       if (this.hydrated) return
 
@@ -25,8 +23,6 @@ export const useAuthStore = defineStore('auth', {
 
       this.hydrated = true
     },
-
-    // ✅ LOGIN
     setAuth(user: any, token: string) {
       const tokenCookie = useCookie<string>('token', {
         maxAge: 60 * 60 * 24 * 7
@@ -42,8 +38,6 @@ export const useAuthStore = defineStore('auth', {
       this.user = user
       this.token = token
     },
-
-    // ✅ LOGOUT
     async logout() {
       const config = useRuntimeConfig()
 
@@ -57,8 +51,6 @@ export const useAuthStore = defineStore('auth', {
 
       this.clearAuth()
     },
-
-    // ✅ CLEAR
     clearAuth() {
       const tokenCookie = useCookie('token')
       const userCookie = useCookie('user')
@@ -69,8 +61,6 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.token = null
     },
-
-    // ✅ REFRESH TOKEN (SAFE)
     async refreshAccessToken() {
       const config = useRuntimeConfig()
 

@@ -1,41 +1,75 @@
 export const useApi = () => {
+
   const config = useRuntimeConfig()
   const auth = useAuthStore()
 
   const api = $fetch.create({
-    baseURL: config.public.apiBase,
-    credentials: 'same-origin',
 
-    // ✅ Attach token
+    baseURL: config.public.apiBase,
+
+    credentials: 'include',
     onRequest({ options }) {
+
+      auth.hydrate()
+
       if (auth.token) {
-        const headers = new Headers(options.headers as HeadersInit)
-        headers.set('Authorization', `Bearer ${auth.token}`)
+
+        const headers =
+          new Headers(options.headers as HeadersInit)
+
+        headers.set(
+          'Authorization',
+          `Bearer ${auth.token}`
+        )
+
         options.headers = headers
       }
     },
-
-    // ✅ Auto refresh on 401
     async onResponseError({ request, response, options }) {
-      if (response.status === 401) {
 
-        const newToken = await auth.refreshAccessToken()
+      if (response.status !== 401) {
+        return Promise.reject(response)
+      }
 
-        if (!newToken) {
+      try {
+        if (request.toString().includes('/auth/refresh-token')) {
+          auth.clearAuth()
+          return Promise.reject(response)
+        }
+        const refreshRes: any = await $fetch('/auth/refresh-token', {
+          baseURL: config.public.apiBase,
+          method: 'POST',
+          credentials: 'include'
+        })
+
+        if (!refreshRes?.accessToken) {
           auth.clearAuth()
           return Promise.reject(response)
         }
 
-        auth.token = newToken
+        auth.token = refreshRes.accessToken
 
-        const headers = new Headers(options.headers as HeadersInit)
-        headers.set('Authorization', `Bearer ${newToken}`)
+        const headers =
+          new Headers(options.headers as HeadersInit)
 
+        headers.set(
+          'Authorization',
+          `Bearer ${refreshRes.accessToken}`
+        )
         return $fetch(request, {
+
           ...options,
           baseURL: config.public.apiBase,
+          credentials: 'include',   
           headers
+
         } as any)
+
+      } catch (err) {
+
+        auth.clearAuth()
+
+        return Promise.reject(response)
       }
     }
   })
